@@ -1,5 +1,5 @@
 // ============================================================
-// chat.js — Lógica del chatbot Q&A con Gemini
+// chat.js — Chatbot Q&A con Gemini (prompt estructurado)
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -7,18 +7,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const userInput = document.getElementById("user-input");
     const sendBtn = document.getElementById("send-btn");
 
-    // Mostrar mensaje de bienvenida
+    // Verificación de configuración
+    if (!CONFIG.WORKER_URL || CONFIG.WORKER_URL.includes("TU-WORKER")) {
+        appendMessage("bot", "⚠️ Configuración pendiente: abre config.js y actualiza WORKER_URL con tu URL de Cloudflare Worker.");
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        return;
+    }
+
     appendMessage("bot", CONFIG.WELCOME_MSG);
-
-    // Enviar con botón
     sendBtn.addEventListener("click", handleSend);
-
-    // Enviar con Enter
     userInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
     });
 
     async function handleSend() {
@@ -29,17 +29,27 @@ document.addEventListener("DOMContentLoaded", () => {
         userInput.value = "";
         userInput.disabled = true;
         sendBtn.disabled = true;
-
         const typingId = showTyping();
 
         try {
-            const response = await askGemini(text);
+            const response = await askWorker(text);
             removeTyping(typingId);
             appendMessage("bot", response);
         } catch (err) {
             removeTyping(typingId);
-            appendMessage("bot", "Ocurrió un error al procesar tu pregunta. Por favor intenta de nuevo.");
-            console.error("Error:", err);
+
+            let msg = "❌ Error de conexión.";
+            const e = err.message || "";
+            if (e.includes("Failed to fetch") || e.includes("NetworkError") || e.includes("Load failed")) {
+                msg = "❌ No se pudo contactar el servidor. Verifica que la URL en config.js sea correcta.";
+            } else if (e.includes("429") || e.includes("quota") || e.includes("RESOURCE_EXHAUSTED")) {
+                msg = "⏳ La API de Gemini alcanzó su límite de uso por minuto. Espera un momento e intenta de nuevo.";
+            } else if (/HTTP [45]\d\d/.test(e)) {
+                msg = `❌ Error del servidor (${e}). Verifica que el secret GEMINI_API_KEY esté configurado en Cloudflare.`;
+            }
+
+            appendMessage("bot", msg);
+            console.error("[Chatbot]", err);
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;
@@ -47,29 +57,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function askGemini(question) {
-        // Construir el catálogo Q&A como texto para el prompt
-        const qaCatalog = QA_DATA.map((item, i) =>
-            `${i + 1}. Pregunta: "${item.q}"\n   Respuesta: "${item.a}"`
-        ).join("\n\n");
-
-        const payload = {
-            question: question,
-            qaCatalog: qaCatalog,
-            noAnswerMsg: CONFIG.NO_ANSWER_MSG
-        };
-
+    // Envía el catálogo completo + pregunta al Worker
+    async function askWorker(question) {
         const res = await fetch(CONFIG.WORKER_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                question,
+                qaData: QA_DATA,       // catálogo completo
+                noAnswerMsg: CONFIG.NO_ANSWER_MSG
+            })
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            throw new Error(`HTTP ${res.status}: ${body}`);
+        }
         const data = await res.json();
         return data.answer || CONFIG.NO_ANSWER_MSG;
     }
 
+    // ── UI helpers ───────────────────────────────────────────────
     function appendMessage(role, text) {
         const wrapper = document.createElement("div");
         wrapper.classList.add("message-wrapper", role === "user" ? "user-wrapper" : "bot-wrapper");
@@ -78,9 +86,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const avatar = document.createElement("div");
             avatar.classList.add("avatar");
             avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" fill="url(#botGrad)"/>
+        <circle cx="12" cy="12" r="10" fill="url(#g1)"/>
         <path d="M8 12h8M12 8v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-        <defs><linearGradient id="botGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
           <stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/>
         </linearGradient></defs>
       </svg>`;
@@ -93,12 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
         wrapper.appendChild(bubble);
 
         chatMessages.appendChild(wrapper);
-
-        // Animate in
-        requestAnimationFrame(() => {
-            bubble.classList.add("visible");
-        });
-
+        requestAnimationFrame(() => bubble.classList.add("visible"));
         chatMessages.scrollTop = chatMessages.scrollHeight;
         return wrapper;
     }
@@ -112,9 +115,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const avatar = document.createElement("div");
         avatar.classList.add("avatar");
         avatar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" fill="url(#botGrad2)"/>
+      <circle cx="12" cy="12" r="10" fill="url(#g2)"/>
       <path d="M8 12h8M12 8v8" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-      <defs><linearGradient id="botGrad2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <defs><linearGradient id="g2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
         <stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/>
       </linearGradient></defs>
     </svg>`;
