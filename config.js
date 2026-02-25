@@ -8,7 +8,7 @@
 const CONFIG = {
     // Reemplaza esta URL con la URL de tu Cloudflare Worker después de desplegarlo.
     // Ejemplo: "https://chatbot-qa.tu-usuario.workers.dev"
-    WORKER_URL: "chatbot-qa.electroternal.workers.dev",
+    WORKER_URL: "https://chatbot-qa.electroternal.workers.dev",
 
     // Mensaje que se muestra cuando no hay respuesta en el catálogo
     NO_ANSWER_MSG: "Lo siento, no tengo información sobre eso. Por favor contacta a nuestro equipo de soporte.",
@@ -19,4 +19,5 @@ const CONFIG = {
     // Mensaje de bienvenida
     WELCOME_MSG: "¡Hola! Soy el asistente virtual de la empresa. ¿En qué puedo ayudarte hoy?"
 };
+
 
