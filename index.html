@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Asistente virtual de la empresa — responde preguntas frecuentes de forma inmediata." />
+  <title>Asistente Virtual | Q&amp;A</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-container">
+  <div class="chat-card">
+
+    <!-- Header -->
+    <header class="chat-header">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7H4a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 12 2zM4 15v1a6 6 0 0 0 6 6h4a6 6 0 0 0 6-6v-1H4zm4 2h8v1a4 4 0 0 1-8 0v-1z"/>
+        </svg>
+      </div>
+      <div class="header-text">
+        <div class="header-title" id="bot-name-header">Asistente Virtual</div>
+        <div class="header-status">
+          <span class="status-dot"></span>
+          <span>En línea · Solo responde preguntas registradas</span>
+        </div>
+      </div>
+      <div class="header-badge">Q&amp;A</div>
+    </header>
+
+    <!-- Área de mensajes -->
+    <main id="chat-messages" role="log" aria-live="polite" aria-label="Conversación"></main>
+
+    <!-- Área de entrada -->
+    <footer class="input-area">
+      <div class="input-wrapper">
+        <textarea
+          id="user-input"
+          rows="1"
+          placeholder="Escribe tu pregunta aquí…"
+          aria-label="Escribe tu pregunta"
+          autocomplete="off"
+          spellcheck="true"
+        ></textarea>
+        <button id="send-btn" aria-label="Enviar mensaje" title="Enviar (Enter)">
+          <!-- Icono Send -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+      <p class="input-hint">El asistente solo responde preguntas dentro del catálogo corporativo.</p>
+    </footer>
+
+  </div>
+</div>
+
+<!-- Datos Q&A de la empresa -->
+<script src="qa-data.js"></script>
+<!-- Configuración (URL del Worker) -->
+<script src="config.js"></script>
+<!-- Lógica del chat -->
+<script src="chat.js"></script>
+
+<!-- Auto-resize del textarea -->
+<script>
+  const ta = document.getElementById("user-input");
+  ta.addEventListener("input", () => {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  });
+
+  // Aplicar nombre del bot desde config
+  document.addEventListener("DOMContentLoaded", () => {
+    const header = document.getElementById("bot-name-header");
+    if (header && typeof CONFIG !== "undefined") {
+      header.textContent = CONFIG.BOT_NAME;
+    }
+  });
+</script>
+
+</body>
+</html>
